@@ -1,3 +1,4 @@
+[참고 깃 be_01](https://github.com/Meoyoug/django-backend-youtube/tree/main)  
 # 유튜브 백엔드 구현
 
 ## 1. REST API

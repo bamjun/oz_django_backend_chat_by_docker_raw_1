@@ -1,0 +1,130 @@
+<!-- chat/templates/chat/index.html -->
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <title>Chat Rooms</title>
+    </head>
+    <body>
+        <h1>Chat Rooms</h1>
+        <div id="room-container">
+            <!-- 채팅방 목록이 여기에 표시됩니다 -->
+        </div>
+
+        <h2>Chat Room: <span id="room-name"></span></h2>
+
+        <div id="chat-log">
+            <!-- 메시지 로그가 여기에 표시됩니다 -->
+        </div>
+        <input id="chat-message-input" type="text" size="100">
+        <input id="chat-message-submit" type="button" value="Send">
+        <button id="leave-room-button">채팅방나가기</button>
+        <!-- <script src="chat.js"></script> 외부 스크립트 파일 참조 -->
+        
+    </body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchChatRooms(); // 페이지 로드 시 채팅방 목록 로드
+            // 나가기 버튼 클릭 시 leaveChatRoom 함수 호출
+            document.getElementById('leave-room-button').addEventListener('click', leaveChatRoom);
+            // document.getElementsByClassName('enter-room-button').addEventListener('click', enterChatRoom);
+        });
+
+        let chatSocket = null; // 전역 변수로 WebSocket 선언
+        
+        function fetchChatRooms() {
+            fetch('/api/v1/chat/room')
+                .then(response => response.json())
+                .then(data => {
+                    const roomContainer = document.getElementById('room-container');
+                    roomContainer.innerHTML = ''; // 초기화
+                    data.forEach(room => {
+                        const roomDiv = document.createElement('div');
+                        roomDiv.innerHTML = `<p>${room.roomname} : ${room.id}</p>`;
+                        roomDiv.innerHTML += `<button onclick="enterChatRoom(${room.id})">참가하기</button>`
+                        roomDiv.onclick = function() {
+                            enterChatRoom(room.id);
+                        };
+                        roomContainer.appendChild(roomDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching chat rooms:', error);
+                });
+        }
+        function chatSocketClose() {
+                if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                        chatSocket.close();
+                        chatSocket = null;
+                    }
+                }
+
+        function enterChatRoom(roomId) {
+                chatSocketClose();
+
+                if (chatSocket === null) {
+                    chatSocket = new WebSocket(
+                        'ws://' + window.location.host + '/ws/chat/' + roomId + '/'
+                    );
+
+                    chatSocket.onmessage = function(e) {
+                        const data = JSON.parse(e.data);
+                        const chatLog = document.getElementById('chat-log');
+                        const messageDiv = document.createElement('div');
+                        messageDiv.textContent = data.user_email + ": " + data.message;
+                        chatLog.appendChild(messageDiv);
+                    };
+
+                    chatSocket.onclose = function(e) {
+                        console.log('Chat socket closed');
+                    };
+
+                    // 채팅방 메시지 로드
+                    loadChatRoom(roomId);
+
+                    document.querySelector('#chat-message-submit').onclick = function(e) {
+                        const messageInputDom = document.querySelector('#chat-message-input');
+                        const message = messageInputDom.value;
+                        // 세션에 저장된 사용자 정보 가져오기
+                        const userEmail = "{{ request.user.email }}";
+                        
+                        chatSocket.send(JSON.stringify({
+                            'message': message,
+                            'user_email': userEmail,
+                        }));
+
+                        messageInputDom.value = '';
+                    };
+                }
+            }
+
+        
+        function loadChatRoom(roomId) {
+            fetch(`/api/v1/chat/${roomId}/messages`)
+                .then(response => response.json())
+                .then(messages => {
+                    const chatLog = document.getElementById('chat-log');
+                    chatLog.innerHTML = ''; // 초기화
+                    messages.forEach(message => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.innerHTML = message.sender['email'] + " : " + message.message;
+                        chatLog.appendChild(messageDiv);
+                    });
+                    document.getElementById('room-name').innerText = roomId;
+                })
+                .catch(error => {
+                    console.error('Error loading messages:', error);
+                });
+        }
+
+        function leaveChatRoom() {
+            // 현재 채팅방에서 WebSocket 연결을 닫음
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.close();
+            }
+            // 필요한 경우 추가 작업 수행 가능
+            // 여기서는 새로고침하는 것으로 가정
+            window.location.reload();
+        }
+    </script>
+</html>

@@ -1,0 +1,35 @@
+version: "3.12"
+services:
+  # first container : Django
+  app:
+    build:
+      context: .
+      args:
+        - DEV=true
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app
+    command: >
+      sh -c "python manage.py wait_for_db &&
+             python manage.py migrate &&
+             daphne -b 0.0.0.0 -p 8000 app.route:application"
+    # db를 위한 환경변수 지정
+    environment:
+      - DB_HOST=db
+      - DB_NAME=youtube
+      - DB_USER=meoyong
+      - DB_PASS=eodyd456
+    # db라는 컨테이너가 실행되어있어야 이 컨테이너가 실행됨
+    depends_on:
+      - db
+
+  # second container : PostgreSQL
+  db:
+    image: postgres:16
+    volumes: 
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=youtube
+      - POSTGRES_USER=meoyong
+      - POSTGRES_PASSWORD=eodyd456

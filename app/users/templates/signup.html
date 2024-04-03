@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Registration</title>
+</head>
+<body>
+    <h2>Signup</h2>
+    <form id="signupForm">
+        <label for="signupEmail">Email:</label><br>
+        <input type="email" id="signupEmail" name="email"><br>
+        <label for="signupPassword">Password:</label><br>
+        <input type="password" id="signupPassword" name="password"><br><br>
+        <label for="signupNickname">Nickname:</label><br>
+        <input type="text" id="signupNickname" name="nickname"><br><br>
+        <button type="button" onclick="signup()">Signup</button>
+    </form>
+
+    <script>
+        function signup() {
+            var email = document.getElementById("signupEmail").value;
+            var password = document.getElementById("signupPassword").value;
+            var nickname = document.getElementById("signupNickname").value;
+            data = { email: email, password: password, nickname: nickname};
+            fetch("/api/v1/users/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert("Signup successful!");
+                } else {
+                    alert("Signup failed. Please try again.");
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+        }
+    </script>
+</body>
+</html>
+
